@@ -51,8 +51,8 @@ handle_rename = (e, data) ->
     error: handle_ajax_error
 
 handle_delete = (e, data) ->
-  last_rollback = data.rlb
-  node = data.rslt.ob
+  last_rollback = data.rlbk
+  node = data.rslt.obj
   delete_url = base_url.clone()
   delete_url.setPath delete_url.path() + '/' + node.attr("id")
   jConfirm Spree.translations.are_you_sure_delete, Spree.translations.confirm_delete, (r) ->
@@ -70,11 +70,12 @@ handle_delete = (e, data) ->
 root = exports ? this
 root.setup_taxonomy_tree = (taxonomy_id) ->
   if taxonomy_id != undefined
+    # this is defined within admin/taxonomies/edit
+    root.base_url = Spree.url(Spree.routes.taxonomy_taxons_path)
+
     $.ajax
-      url: '/api/taxonomies/' + taxonomy_id + '/jstree', 
+      url: base_url.path().replace("/taxons", "/jstree"),
       success: (taxonomy) ->
-        # this is defined within admin/taxonomies/edit
-        root.base_url = Spree.url(Spree.routes.taxonomy_taxons_path)
         last_rollback = null
 
         conf =
@@ -82,7 +83,7 @@ root.setup_taxonomy_tree = (taxonomy_id) ->
             data: taxonomy,
             ajax:
               url: (e) ->
-                '/api/taxonomies/' + taxonomy_id + '/taxons/' + e.attr('id') + '/jstree'
+                base_url.path() + '/' + e.attr('id') + '/jstree'
           themes:
             theme: "apple",
             url: "/assets/jquery.jstree/themes/apple/style.css"

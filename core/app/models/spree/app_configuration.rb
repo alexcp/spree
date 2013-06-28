@@ -25,7 +25,6 @@ module Spree
     preference :admin_interface_logo, :string, default: 'admin/bg/spree_50.png'
     preference :admin_products_per_page, :integer, default: 10
     preference :allow_backorder_shipping, :boolean, default: false # should only be true if you don't need to track inventory
-    preference :allow_backorders, :boolean, default: true
     preference :allow_checkout_on_gateway_error, :boolean, default: false
     preference :allow_guest_checkout, :boolean, default: true
     preference :allow_ssl_in_development_and_test, :boolean, default: false
@@ -39,7 +38,6 @@ module Spree
     preference :check_for_spree_alerts, :boolean, default: true
     preference :checkout_zone, :string, default: nil # replace with the name of a zone if you would like to limit the countries
     preference :company, :boolean, default: false # Request company field for billing and shipping addr
-    preference :create_inventory_units, :boolean, default: true # should only be false when track_inventory_levels is false, also disables RMA's
     preference :currency, :string, default: "USD"
     preference :currency_decimal_mark, :string, default: "."
     preference :currency_symbol_position, :string, default: "before"
@@ -70,7 +68,7 @@ module Spree
     preference :site_name, :string, default: 'Spree Demo Site'
     preference :site_url, :string, default: 'demo.spreecommerce.com'
     preference :tax_using_ship_address, :boolean, default: true
-    preference :track_inventory_levels, :boolean, default: true # will not track on_hand values for variants /products
+    preference :track_inventory_levels, :boolean, default: true # Determines whether to track on_hand values for variants / products.
 
     # Preferences related to image settings
     preference :attachment_default_url, :string, default: '/spree/products/:id/:style/:basename.:extension'

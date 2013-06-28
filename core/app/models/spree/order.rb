@@ -3,23 +3,13 @@ require 'spree/order/checkout'
 
 module Spree
   class Order < ActiveRecord::Base
-    # TODO:
-    # Need to use fully qualified name here because during sandbox migration
-    # there is a class called Checkout which conflicts if you use this:
-    #
-    #   include Checkout
-    #
-    # rather than the qualified name. This will most likely be fixed with the
-    # 1.3 release.
-    include Spree::Order::Checkout
+    include Checkout
+
     checkout_flow do
       go_to_state :address
       go_to_state :delivery
       go_to_state :payment, if: ->(order) {
-        # Fix for #2191
-        if order.shipments
-          order.update_totals
-        end
+        order.update_totals
         order.payment_required?
       }
       go_to_state :confirm, if: ->(order) { order.confirmation_required? }
@@ -170,7 +160,6 @@ module Spree
 
     # Is this a free order in which case the payment step should be skipped
     def payment_required?
-      update_totals
       total.to_f > 0.0
     end
 
@@ -180,8 +169,13 @@ module Spree
     end
 
     # Used by the checkout state machine to check for unprocessed payments
-    # The Order should be unable to proceed to complete if there are unprocessed
+    # The Order should be only be able to proceed to complete if there are unprocessed
     # payments and there is payment required.
+    #
+    # The reason for this is directly before an order transitions to complete, all
+    # of the order's payments have `process!` called on it (look in order/checkout.rb).
+    # If payment *is* required and there's no payments which haven't already been tried,
+    # then the order cannot be paid for and therefore should not be able to become complete.
     def has_unprocessed_payments?
       payments.with_state('checkout').reload.exists?
     end
@@ -277,32 +271,21 @@ module Spree
       contents.add(variant, quantity)
     end
 
+
     def remove_variant(variant, quantity = 1)
       ActiveSupport::Deprecation.warn("[SPREE] Spree::Order#remove_variant will be deprecated in Spree 2.1, please use order.contents.remove instead.")
       contents.remove(variant, quantity)
-    end
-
-    def remove_variant(variant, quantity = 1)
-      current_item = find_line_item_by_variant(variant)
-      current_item.quantity += -quantity
-
-      if current_item.quantity == 0
-        current_item.destroy
-      else
-        current_item.save!
-      end
-
-      self.reload
-      current_item
     end
 
     # Associates the specified user with the order.
     def associate_user!(user)
       self.user = user
       self.email = user.email
-      # disable validations since they can cause issues when associating
-      # an incomplete address during the address step
-      save(validate: false)
+
+      if persisted?
+        # immediately persist the changes we just made, but don't use save since we might have an invalid address associated
+        self.class.unscoped.where(id: id).update_all(email: user.email, user_id: user.id)
+      end
     end
 
     # FIXME refactor this method and implement validation using validates_* utilities
@@ -316,9 +299,8 @@ module Spree
       self.number
     end
 
-    # TODO should be deprecated by split shipments
-    # convenience method since many stores will not allow user to create multiple shipments
     def shipment
+      ActiveSupport::Deprecation.warn("[SPREE] Spree::Order#shipment is typically incorrect due to multiple shipments and will be deprecated in Spree 2.1, please process Spree::Order#shipments instead.")
       @shipment ||= shipments.last
     end
 

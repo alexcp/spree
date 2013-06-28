@@ -165,15 +165,7 @@ module Spree
       end
     end
 
-    def t(*args)
-      puts "WARNING: Spree's translations are now scoped to a 'spree' namespace. Please use the Spree.t helper."
-      puts "Called from: #{caller[0]}"
-      I18n.t(*args)
-    end
-
-
     private
-
     # Returns style of image or nil
     def image_style_from_method_name(method_name)
       if style = method_name.to_s.sub(/_image$/, '')
@@ -182,18 +174,28 @@ module Spree
       end
     end
 
+    def create_product_image_tag(image, product, options, style)
+      options.reverse_merge! alt: image.alt.blank? ? product.name : image.alt
+      image_tag image.attachment.url(style), options
+    end
+
     def define_image_method(style)
       self.class.send :define_method, "#{style}_image" do |product, *options|
         options = options.first || {}
         if product.images.empty?
-          image_tag "noimage/#{style}.png", options
+          if !product.is_a?(Spree::Variant) && !product.variant_images.empty?
+            create_product_image_tag(product.variant_images.first, product, options, style)
+          else
+            if product.is_a?(Variant) && !product.product.variant_images.empty?
+              create_product_image_tag(product.product.variant_images.first, product, options, style)
+            else
+              image_tag "noimage/#{style}.png", options
+            end
+          end
         else
-          image = product.images.first
-          options.reverse_merge! alt: image.alt.blank? ? product.name : image.alt
-          image_tag image.attachment.url(style), options
+          create_product_image_tag(product.images.first, product, options, style)
         end
       end
     end
-
   end
 end
